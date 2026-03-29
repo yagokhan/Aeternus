@@ -1,5 +1,5 @@
 """
-Project AETERNUS — Surgical Tiered Optimizer.
+Project AETERNUS — Ultra-Aggressive Tiered Optimizer.
 """
 from __future__ import annotations
 import torch
@@ -8,7 +8,7 @@ import json
 from pathlib import Path
 from config import (
     DEVICE, DTYPE, GPU_BATCH_SIZE, RESULTS_DIR,
-    TITAN_SPACE, NAVIGATOR_SPACE, VOLT_SPACE, INITIAL_CAPITAL, POS_FRAC
+    TITAN_SPACE, NAVIGATOR_SPACE, VOLT_SPACE
 )
 from trade_manager import simulate_batch, extract_top_k, BatchResult
 from signal_auditor import load_trade_universe
@@ -19,9 +19,10 @@ def build_grid(space) -> torch.Tensor:
     b = torch.arange(space.midline_buf[0], space.midline_buf[1]+0.0001, space.midline_buf[2], dtype=DTYPE, device=DEVICE)
     s = torch.arange(space.stddev_mult[0], space.stddev_mult[1]+0.0001, space.stddev_mult[2], dtype=DTYPE, device=DEVICE)
     a = torch.arange(space.activation[0], space.activation[1]+0.0001, space.activation[2], dtype=DTYPE, device=DEVICE)
+    h = torch.arange(space.hard_sl[0], space.hard_sl[1]+0.0001, space.hard_sl[2], dtype=DTYPE, device=DEVICE)
     
-    grid = torch.meshgrid(c, p, b, s, a, indexing="ij")
-    params = torch.stack([g.flatten() for g in grid] + [torch.full_like(grid[0].flatten(), 0.015)], dim=1)
+    grid = torch.meshgrid(c, p, b, s, a, h, indexing="ij")
+    params = torch.stack([g.flatten() for g in grid], dim=1)
     return params
 
 def run_tier_optimization():
@@ -29,21 +30,21 @@ def run_tier_optimization():
     best_configs = {}
 
     for space in [TITAN_SPACE, NAVIGATOR_SPACE, VOLT_SPACE]:
-        print(f"\n[Surgical] Optimizing Tier: {space.name}")
+        print(f"\n[Ultra-Aggressive] Optimizing Tier: {space.name}")
         tier_id = {"TITAN": 0, "NAVIGATOR": 1, "VOLT": 2}[space.name]
         
-        # Filter training data for this tier
         train_full = data_splits["train"]
         mask = (train_full["tier_id"] == tier_id)
         train_tier = {k: v[mask] if isinstance(v, torch.Tensor) and v.shape[0] > 0 else v for k, v in train_full.items()}
         train_tier["n"] = mask.sum().item()
         
         if train_tier["n"] == 0:
-            print(f"  No trades for {space.name} - using default")
+            print(f"  No trades for {space.name}")
             continue
 
         params = build_grid(space)
         N = params.shape[0]
+        print(f"  Grid Size: {N:,} trials")
         all_results = []
         
         for i in range(0, N, GPU_BATCH_SIZE):
@@ -60,11 +61,11 @@ def run_tier_optimization():
         
         best = extract_top_k(merged, params, k=1)[0]
         best_configs[space.name] = best
-        print(f"  Best {space.name}: WR={best['win_rate']:.1%} | PnL=${best['net_pnl']:,.0f}")
+        print(f"  Best {space.name}: WR={best['win_rate']:.1%} | PnL=${best['net_pnl']:,.0f} | SL={best['hard_sl']:.1%}")
 
-    # Final Validation on Full Blind Set
+    # Final Validation
     print("\n" + "="*80)
-    print("  FINAL MULTI-TIER PERFORMANCE (Blind Test)")
+    print("  ULTRA-AGGRESSIVE MULTI-TIER PERFORMANCE (Blind Test)")
     print("="*80)
     
     blind_full = data_splits["blind"]
@@ -77,7 +78,7 @@ def run_tier_optimization():
         blind_tier["n"] = mask.sum().item()
         
         if blind_tier["n"] > 0:
-            p = torch.tensor([[cfg['conf_min'], cfg['pvt_r_min'], cfg['midline_buffer'], cfg['stddev_mult'], cfg['trail_activation'], 0.015]], device=DEVICE, dtype=DTYPE)
+            p = torch.tensor([[cfg['conf_min'], cfg['pvt_r_min'], cfg['midline_buffer'], cfg['stddev_mult'], cfg['trail_activation'], cfg['hard_sl']]], device=DEVICE, dtype=DTYPE)
             res = simulate_batch(blind_tier, p)
             w = int(res.win_rate[0] * res.n_trades[0])
             print(f"  {name:<10}: WR={res.win_rate[0]:.1%} | Trades={int(res.n_trades[0]):>3} | PnL=${res.net_pnl[0]:>8,.0f}")
