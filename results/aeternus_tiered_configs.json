@@ -1,0 +1,41 @@
+{
+  "TITAN": {
+    "rank": 1,
+    "score": 2218.932373046875,
+    "net_pnl": 61925.25,
+    "win_rate": 0.6875,
+    "n_trades": 16,
+    "avg_pnl_pct": 430.0364685058594,
+    "conf_min": 0.9740000367164612,
+    "pvt_r_min": 0.949999988079071,
+    "midline_buffer": 0.15000000596046448,
+    "stddev_mult": 0.800000011920929,
+    "trail_activation": 0.004000000189989805
+  },
+  "NAVIGATOR": {
+    "rank": 1,
+    "score": 2072.234375,
+    "net_pnl": 1282887.75,
+    "win_rate": 0.7022472023963928,
+    "n_trades": 356,
+    "avg_pnl_pct": 400.4019470214844,
+    "conf_min": 0.9519999623298645,
+    "pvt_r_min": 0.8799999952316284,
+    "midline_buffer": 0.25,
+    "stddev_mult": 1.2000000476837158,
+    "trail_activation": 0.004000000189989805
+  },
+  "VOLT": {
+    "rank": 1,
+    "score": 3637.563232421875,
+    "net_pnl": 532111.9375,
+    "win_rate": 0.759036123752594,
+    "n_trades": 83,
+    "avg_pnl_pct": 712.3319091796875,
+    "conf_min": 0.9559999704360962,
+    "pvt_r_min": 0.9280000329017639,
+    "midline_buffer": 0.3499999940395355,
+    "stddev_mult": 1.5,
+    "trail_activation": 0.004000000189989805
+  }
+}
